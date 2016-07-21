@@ -1,6 +1,8 @@
 package androidworks.nikhil.locationalarm;
 
 import android.*;
+import android.app.Activity;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Criteria;
 import android.location.Location;
@@ -9,12 +11,17 @@ import android.location.LocationManager;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
+import android.text.Html;
 import android.util.Log;
+import android.view.View;
 import android.widget.Toast;
 
+import com.google.android.gms.common.GooglePlayServicesNotAvailableException;
+import com.google.android.gms.common.GooglePlayServicesRepairableException;
 import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.places.Place;
 import com.google.android.gms.location.places.ui.PlaceAutocompleteFragment;
+import com.google.android.gms.location.places.ui.PlacePicker;
 import com.google.android.gms.location.places.ui.PlaceSelectionListener;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -27,6 +34,7 @@ import com.google.android.gms.maps.model.MarkerOptions;
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, LocationListener {
 
     private GoogleMap mMap;
+    private int REQUEST_PLACE_PICKER = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,21 +64,25 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         locationManager.requestLocationUpdates(bestProvider, 20000, 0, this);
 
 
-
         PlaceAutocompleteFragment autocompleteFragment = (PlaceAutocompleteFragment)
                 getFragmentManager().findFragmentById(R.id.place_autocomplete_fragment);
-
+        autocompleteFragment.setHint("Search for your destination");
         autocompleteFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
             @Override
             public void onPlaceSelected(Place place) {
                 // TODO: Get info about the selected place.
                 Log.i("nikhil", "Place: " + place.getName());
-                Toast.makeText(MapsActivity.this,"Place: " + place.getName(),Toast.LENGTH_SHORT).show();
+                Toast.makeText(MapsActivity.this, "Place: " + place.getName(), Toast.LENGTH_SHORT).show();
                 String placeDetailsStr = place.getName() + "\n"
                         + place.getId() + "\n"
                         + place.getLatLng().toString() + "\n"
                         + place.getAddress() + "\n"
                         + place.getAttributions();
+
+                mMap.moveCamera(CameraUpdateFactory.newLatLng(place.getLatLng()));
+                mMap.animateCamera(CameraUpdateFactory.zoomTo(15));
+                mMap.addMarker(new MarkerOptions().position(place.getLatLng()).draggable(true));
+
             }
 
             @Override
@@ -129,5 +141,42 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onProviderDisabled(String provider) {
 
+    }
+
+    public void pickPlace(View view) {
+
+        // Construct an intent for the place picker
+        try {
+            PlacePicker.IntentBuilder intentBuilder =
+                    new PlacePicker.IntentBuilder();
+            Intent intent = intentBuilder.build(this);
+            // Start the intent by requesting a result,
+            // identified by a request code.
+            startActivityForResult(intent, REQUEST_PLACE_PICKER);
+
+        } catch (GooglePlayServicesRepairableException | GooglePlayServicesNotAvailableException e) {
+            // ...
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode,
+                                    int resultCode, Intent data) {
+
+        if (requestCode == REQUEST_PLACE_PICKER
+                && resultCode == Activity.RESULT_OK) {
+
+            // The user has selected a place. Extract the name and address.
+            //  final Place place = PlacePicker.getPlace(data, this);
+            final Place place = PlacePicker.getPlace(this, data);
+
+            mMap.moveCamera(CameraUpdateFactory.newLatLng(place.getLatLng()));
+            mMap.animateCamera(CameraUpdateFactory.zoomTo(15));
+            mMap.addMarker(new MarkerOptions().position(place.getLatLng()).draggable(true));
+
+
+        } else {
+            super.onActivityResult(requestCode, resultCode, data);
+        }
     }
 }
