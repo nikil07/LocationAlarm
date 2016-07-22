@@ -3,11 +3,13 @@ package androidworks.nikhil.locationalarm;
 import android.*;
 import android.app.Activity;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Criteria;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.preference.PreferenceManager;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
@@ -30,16 +32,22 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.gson.Gson;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, LocationListener {
 
     private GoogleMap mMap;
     private int REQUEST_PLACE_PICKER = 0;
+    Gson gson = new Gson();
+    SharedPreferences sharedPreferences;
+    SharedPreferences.Editor editor;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
+        sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+        editor = sharedPreferences.edit();
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
@@ -73,15 +81,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 // TODO: Get info about the selected place.
                 Log.i("nikhil", "Place: " + place.getName());
                 Toast.makeText(MapsActivity.this, "Place: " + place.getName(), Toast.LENGTH_SHORT).show();
-                String placeDetailsStr = place.getName() + "\n"
-                        + place.getId() + "\n"
-                        + place.getLatLng().toString() + "\n"
-                        + place.getAddress() + "\n"
-                        + place.getAttributions();
 
                 mMap.moveCamera(CameraUpdateFactory.newLatLng(place.getLatLng()));
                 mMap.animateCamera(CameraUpdateFactory.zoomTo(15));
                 mMap.addMarker(new MarkerOptions().position(place.getLatLng()).draggable(true));
+
+                editor.putString("destination", gson.toJson(place));
+                editor.apply();
+
+
+                Intent serviceIntent = new Intent(MapsActivity.this,CheckLocation.class);
+                startService(serviceIntent);
 
             }
 
@@ -174,6 +184,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             mMap.animateCamera(CameraUpdateFactory.zoomTo(15));
             mMap.addMarker(new MarkerOptions().position(place.getLatLng()).draggable(true));
 
+            editor.putString("destination", gson.toJson(place));
+            editor.apply();
+
+            Intent serviceIntent = new Intent(MapsActivity.this,CheckLocation.class);
+            startService(serviceIntent);
 
         } else {
             super.onActivityResult(requestCode, resultCode, data);
